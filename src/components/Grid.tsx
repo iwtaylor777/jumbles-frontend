@@ -1,32 +1,56 @@
-import { useState } from "react";
+// src/components/Grid.tsx
+import { useState, useMemo, useEffect } from "react";
+import WORDS from "../data/words5";          // <-- import the TS word list
+
+const WORD_SET = new Set(WORDS);
+const MAX_SWAPS = 12;
 
 type Props = {
-  initial: string[][];        // 4 × 5 grid of letters
+  initial: string[][];               // 4 × 5 grid of letters
+  onSolved: (moves: number) => void; // notify parent when solved
 };
 
-export default function Grid({ initial }: Props) {
+export default function Grid({ initial, onSolved }: Props) {
   const [grid, setGrid] = useState(initial);
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [swaps, setSwaps] = useState(0);
 
-  // click handler
-  function pick(r: number, c: number) {
+  /* ---------- Helpers ---------- */
+
+  // which rows are currently real words?
+  const validRows = useMemo(
+    () => grid.map((row) => WORD_SET.has(row.join("").toLowerCase())),
+    [grid]
+  );
+
+  // fire callback once when puzzle is solved
+  useEffect(() => {
+    if (validRows.every(Boolean)) {
+      onSolved(swaps);
+    }
+  }, [validRows, swaps, onSolved]);
+
+  function swap(r: number, c: number) {
+    if (swaps >= MAX_SWAPS) return; // swap limit reached
     if (!selected) {
       setSelected([r, c]);
       return;
     }
+
     const [sr, sc] = selected;
     if (sr === r && sc === c) {
-      setSelected(null);                 // same cell → deselect
+      setSelected(null);            // deselect same cell
       return;
     }
-    // swap letters
+
     const next = grid.map((row) => [...row]);
     [next[sr][sc], next[r][c]] = [next[r][c], next[sr][sc]];
     setGrid(next);
     setSelected(null);
     setSwaps((s) => s + 1);
   }
+
+  /* ---------- Render ---------- */
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -35,13 +59,20 @@ export default function Grid({ initial }: Props) {
         {grid.map((row, r) => (
           <div key={r} className="flex">
             {row.map((ch, c) => {
-              const isSel = selected?.[0] === r && selected?.[1] === c;
+              const isSel   = selected?.[0] === r && selected?.[1] === c;
+              const solved  = validRows[r];
+              const disabled = swaps >= MAX_SWAPS && !solved;
+
               return (
                 <button
                   key={c}
-                  onClick={() => pick(r, c)}
+                  onClick={() => swap(r, c)}
                   className={`w-12 h-12 border text-xl font-bold transition
-                    ${isSel ? "bg-blue-300" : "bg-white hover:bg-gray-200"}`}
+                    ${solved   ? "bg-emerald-300"
+                      : isSel ? "bg-blue-300"
+                      : "bg-white hover:bg-gray-200"}
+                    ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                  disabled={disabled}
                 >
                   {ch}
                 </button>
@@ -51,9 +82,12 @@ export default function Grid({ initial }: Props) {
         ))}
       </div>
 
-      {/* simple swap counter */}
-      <p className="text-sm text-gray-500">
-        Swaps used: <span className="font-semibold">{swaps}</span>
+      {/* swap counter */}
+      <p className="text-sm text-gray-700">
+        Swaps:&nbsp;
+        <span className="font-semibold">
+          {swaps}/{MAX_SWAPS}
+        </span>
       </p>
     </div>
   );
