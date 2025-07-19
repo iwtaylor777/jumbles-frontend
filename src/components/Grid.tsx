@@ -67,11 +67,15 @@ export default function Grid({ initial, onSolved }: Props) {
                 <button
                   key={c}
                   onClick={() => swap(r, c)}
-                  className={`w-12 h-12 border text-xl font-bold transition
-                    ${solved   ? "bg-emerald-300"
-                      : isSel ? "bg-blue-300"
-                      : "bg-white hover:bg-gray-200"}
-                    ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                  className={`w-14 h-14 sm:w-16 sm:h-16
+                      rounded-lg border-2 border-gray-300
+                      text-2xl sm:text-3xl font-bold
+                      flex items-center justify-center
+                      select-none transition
+                      ${solved   ? "bg-emerald-300/90 border-emerald-400 text-white"
+                        : isSel  ? "bg-sky-300/70 border-sky-400"
+                        : disabled ? "opacity-30 cursor-not-allowed"
+                        : "bg-slate-50 hover:bg-slate-200 active:translate-y-[1px]"}`}
                   disabled={disabled}
                 >
                   {ch}
@@ -83,11 +87,9 @@ export default function Grid({ initial, onSolved }: Props) {
       </div>
 
       {/* swap counter */}
-      <p className="text-sm text-gray-700">
-        Swaps:&nbsp;
-        <span className="font-semibold">
-          {swaps}/{MAX_SWAPS}
-        </span>
+      <p className="text-sm text-gray-600 text-center">
+         Swaps&nbsp;
+         <span className="font-semibold">{swaps}</span>/{MAX_SWAPS}
       </p>
     </div>
   );
