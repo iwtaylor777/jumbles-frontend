@@ -1,16 +1,30 @@
-<!doctype html>
+<!-- index.html  (project root) -->
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-    <!-- Google Font -->
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Nunito font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Favicon (SVG shows in every modern browser) -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Open-Graph / Twitter preview -->
+  <meta property="og:title"       content="Jumbles — Daily Word-Swap Game" />
+  <meta property="og:description" content="Swap letters, form words, beat the limit. New puzzle every day!" />
+  <meta property="og:image"       content="/og.png" />
+  <meta property="twitter:card"   content="summary_large_image" />
+
+  <title>Jumbles</title>
+</head>
+<body class="h-full">
+  <div id="root"></div>
+
+  <!-- Vite injects JS + HMR script here -->
+  <script type="module" src="/src/main.tsx"></script>
+</body>
 </html>
+
