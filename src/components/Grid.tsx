@@ -68,14 +68,17 @@ export default function Grid({ initial, onSolved }: Props) {
                   key={c}
                   onClick={() => swap(r, c)}
                   className={`w-14 h-14 sm:w-16 sm:h-16
-                      rounded-lg border-2 border-gray-300
-                      text-2xl sm:text-3xl font-bold
-                      flex items-center justify-center
-                      select-none transition
-                      ${solved   ? "bg-emerald-300/90 border-emerald-400 text-white"
-                        : isSel  ? "bg-sky-300/70 border-sky-400"
-                        : disabled ? "opacity-30 cursor-not-allowed"
-                        : "bg-slate-50 hover:bg-slate-200 active:translate-y-[1px]"}`}
+                    rounded-lg border-2 border-gray-300
+                    text-2xl sm:text-3xl font-bold
+                    flex items-center justify-center select-none
+                    transition-transform duration-150
+                    ${solved
+                        ? "bg-emerald-400 border-emerald-500 text-white animate-pulse"
+                        : isSel
+                        ? "bg-sky-300 border-sky-400"
+                        : disabled
+                        ? "opacity-40 cursor-not-allowed"
+                        : "bg-slate-50 hover:bg-slate-200 active:translate-y-[2px]"}`}
                   disabled={disabled}
                 >
                   {ch}
