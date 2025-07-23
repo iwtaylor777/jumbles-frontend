@@ -1,10 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Global tweaks */
 html, body {
   @apply h-full scroll-smooth font-["Nunito",sans-serif] bg-gradient-to-br from-slate-50 to-slate-100 text-gray-800;
 }
 
-#root { @apply h-full; }
+#root { 
+  @apply h-full; 
+}
