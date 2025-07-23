@@ -8,3 +8,7 @@ html, body {
 #root { 
   @apply h-full; 
 }
+
+@layer utilities {
+  .container { @apply px-4 sm:px-6 lg:px-8; }
+}
