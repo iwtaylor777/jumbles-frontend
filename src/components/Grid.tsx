@@ -81,7 +81,7 @@ export default function Grid({ initial, onSolved }: Props) {
                       ? "bg-sky-300 border-sky-400"
                       : disabled
                       ? "opacity-40 cursor-not-allowed"
-                      : "bg-slate-50 hover:bg-slate-200 active:translate-y-[2px]"}`}
+                      : "bg-slate-50 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"}`}
                 >
                   {ch}
                 </button>
@@ -91,7 +91,7 @@ export default function Grid({ initial, onSolved }: Props) {
         ))}
       </div>
 
-      <p className="text-sm text-gray-600 text-center">
+      <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
         Swaps&nbsp;
         <span className="font-semibold">{swaps}</span>/{MAX_SWAPS}
       </p>

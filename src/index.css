@@ -2,7 +2,9 @@
 
 /* Global tweaks */
 html, body {
-  @apply h-full scroll-smooth font-["Nunito",sans-serif] bg-gradient-to-br from-slate-50 to-slate-100 text-gray-800;
+    @apply h-full scroll-smooth font-["Nunito",sans-serif]
+         bg-gradient-to-br from-slate-50 to-slate-100 text-gray-800
+         dark:from-slate-900 dark:to-slate-800 dark:text-gray-100;
 }
 
 #root { 

@@ -1,44 +1,75 @@
-// src/App.tsx
-import { useState } from "react";
+// src/App.tsx  – imports & component start
+import React, { useState, useEffect } from "react";          // ← add useEffect
 import { useQuery } from "@tanstack/react-query";
 import { fetchToday } from "./api";
 import Grid from "./components/Grid";
+
+import { Sun, Moon, Info as InfoIcon } from "lucide-react";
 import Confetti from "react-confetti";
 import { useWindowSize } from "@uidotdev/usehooks";
-import { Info as InfoIcon } from "lucide-react";
 
 /* -------------------------------------------------------------- */
 export default function App() {
-  /* --- data fetch --------------------------------------------- */
+  /* ----- dark‑mode state persisted in localStorage ------------ */
+  const [dark, setDark] = useState(
+    () => localStorage.getItem("theme") === "dark",
+  );
+
+  useEffect(() => {
+    const el = document.documentElement;
+    if (dark) {
+      el.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      el.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [dark]);
+
+  /* ---- data fetch for today’s puzzle ------------------------- */
   const { data, isLoading, error } = useQuery({
     queryKey: ["today"],
     queryFn: fetchToday,
   });
 
-  /* --- local state ------------------------------------------- */
   const [solvedMoves, setSolvedMoves] = useState<number | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
-  /* --- early returns ----------------------------------------- */
-  if (isLoading) return centerScreen("Loading…");
-  if (error || !data) return centerScreen("Failed to load puzzle 😢", true);
+  if (isLoading) return center("Loading…");
+  if (error || !data) return center("Failed to load puzzle 😢", true);
 
-  /* --- render ------------------------------------------------- */
   return (
-    <div className="h-full flex items-center justify-center">
-      {/* CARD */}
-      <div className="relative bg-white rounded-3xl shadow-2xl p-8 sm:p-10 w-[min(92vw,480px)] space-y-8">
+    <main className="h-full flex items-center justify-center">
+      <section
+        className="container max-w-md mx-auto relative
+                   bg-white dark:bg-slate-900
+                   rounded-3xl shadow-2xl
+                   p-6 xs:p-8 sm:p-10 space-y-8"
+      >
+        {/* dark / light toggle */}
+        <button
+          aria-label="Toggle dark mode"
+          onClick={() => setDark((d) => !d)}
+          className="absolute top-4 left-4 text-gray-500 hover:text-gray-700 dark:text-gray-300"
+        >
+          {dark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         {/* info button */}
         <button
           aria-label="How to play"
           onClick={() => setShowHelp(true)}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300"
         >
           <InfoIcon size={20} />
         </button>
 
         {/* title */}
-        <h1 className="text-3xl font-bold text-center">Jumbles</h1>
+        <h1 className="text-3xl font-bold text-center dark:text-gray-100">
+          Jumbles
+        </h1>
+
+        {/* grid & rest of component … */}
 
         {/* grid */}
         <Grid initial={data.grid} onSolved={setSolvedMoves} />
@@ -50,10 +81,19 @@ export default function App() {
 
         {/* help modal */}
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
+
+/* helper for Loading / Error screens                               */
+function center(msg: string, isErr = false) {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <p className={`text-xl ${isErr ? "text-red-600" : ""}`}>{msg}</p>
+    </div>
+  );
+ }
 
 /* ---------- centered fallback screens ------------------------ */
 function centerScreen(msg: string, isErr = false) {
@@ -82,7 +122,7 @@ function ResultModal({ moves, id, onClose }: ResultProps) {
         <Confetti width={width} height={height} numberOfPieces={160} recycle={false} />
       )}
 
-      <div className="bg-white rounded-xl p-6 w-80 space-y-4 text-center shadow-lg">
+      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-80 space-y-4 text-center shadow-lg">
         <h2 className="text-2xl font-bold text-emerald-600">You solved it! 🎉</h2>
         <p className="text-gray-700">Moves used: {moves}</p>
 
@@ -108,7 +148,7 @@ function ResultModal({ moves, id, onClose }: ResultProps) {
 function HelpModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center overflow-y-auto z-50">
-      <div className="bg-white rounded-xl p-6 w-80 space-y-4 text-gray-700">
+      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-80 space-y-4 text-gray-700">
         <h3 className="text-xl font-bold text-center">How to Play</h3>
         <ol className="list-decimal pl-4 space-y-2 text-sm text-left">
           <li>Tap one letter, then another to swap.</li>
