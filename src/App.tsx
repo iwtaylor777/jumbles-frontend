@@ -24,6 +24,7 @@ export default function App() {
       el.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
+    console.log("dark mode:", dark);
   }, [dark]);
 
   /* ---- data fetch for today’s puzzle ------------------------- */
@@ -50,7 +51,7 @@ export default function App() {
         <button
           aria-label="Toggle dark mode"
           onClick={() => setDark((d) => !d)}
-          className="absolute top-4 left-4 text-gray-500 hover:text-gray-700 dark:text-gray-300"
+          className="absolute top-4 left-4 text-gray-500 hover:text-gray-700 dark:text-gray-50"
         >
           {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
@@ -59,13 +60,13 @@ export default function App() {
         <button
           aria-label="How to play"
           onClick={() => setShowHelp(true)}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300"
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-50"
         >
           <InfoIcon size={20} />
         </button>
 
         {/* title */}
-        <h1 className="text-3xl font-bold text-center dark:text-gray-100">
+        <h1 className="text-3xl font-bold text-center dark:text-gray-50">
           Jumbles
         </h1>
 
