@@ -1,10 +1,5 @@
 // src/App.tsx  ----------------------------------------------------
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import { useState, useEffect, useRef } from "react";   // React-17 “automatic” JSX runtime
 import { useQuery } from "@tanstack/react-query";
 import { Sun, Moon, Info as InfoIcon } from "lucide-react";
 import Confetti from "react-confetti";
