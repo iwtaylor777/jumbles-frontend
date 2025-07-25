@@ -1,7 +1,12 @@
 /* ------------------------------------------------------------------
    src/App.tsx – Jumbles frontend
 ------------------------------------------------------------------- */
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { Sun, Moon } from "lucide-react";
 import Confetti from "react-confetti";
 import { useWindowSize } from "@uidotdev/usehooks";
@@ -14,7 +19,7 @@ import {
 import Grid, { type GridHandle } from "./components/Grid";
 import { fetchToday } from "./api";
 
-/* one shared react-query instance -------------------------------- */
+/* one shared react-query client ---------------------------------- */
 const queryClient = new QueryClient();
 
 /* helper to center any message ----------------------------------- */
@@ -26,7 +31,7 @@ function center(msg: string, err = false) {
   );
 }
 
-/* ======================== App component ========================= */
+/* ======================== App ======================== */
 function App() {
   /* ------------- theme (dark / light) -------------------------- */
   const [dark, setDark] = useState(
@@ -43,38 +48,20 @@ function App() {
     }
   }, [dark]);
 
-  /* ------------- fetch today’s puzzle -------------------------- */
+  /* ------------- data ------------------------------------------------ */
   const { data, isLoading, error } = useQuery({
     queryKey: ["today"],
     queryFn: fetchToday,
   });
 
-  /* ------------- refs & local state ---------------------------- */
+  /* ------------- refs + local state (hooks must always run!) --------- */
   const gridRef = useRef<GridHandle>(null);
   const [solvedMoves, setSolvedMoves] = useState<number | null>(null);
   const { width, height } = useWindowSize();
 
-  /* ------------- derived grid / solutions ---------------------- */
-  if (isLoading) return center("Loading…");
-  if (error || !data) return center("Failed to load puzzle 😢", true);
-
-  const gridRows = data.grid.map((row: any) =>
-    Array.isArray(row) ? row : typeof row === "string" ? row.split("") : row
-  );
-  const solutions: string[] = Array.isArray(data.solution) ? data.solution : [];
-
-  if (
-    solutions.length !== 4 ||
-    gridRows.length !== 4 ||
-    !gridRows.every((r: any) => Array.isArray(r) && r.length === 5)
-  ) {
-    console.error("Puzzle payload malformed:", data);
-    return center("Puzzle unavailable (bad data) 😢", true);
-  }
-
-  /* ------------- callbacks from <Grid> ------------------------- */
-  const handleRowSolved = useCallback((i: number) => {
-    console.log(`row ${i + 1} solved`);
+  /* ------------- callbacks from <Grid> ------------------------------- */
+  const handleRowSolved = useCallback((row: number) => {
+    console.log(`row ${row + 1} solved`);
   }, []);
 
   const handlePuzzleSolved = useCallback((moves: number) => {
@@ -84,10 +71,28 @@ function App() {
 
   const handleOutOfMoves = useCallback(() => {
     console.log("out of moves");
-    // later: open Give-Up dialog
   }, []);
 
-  /* --------------------------- UI ------------------------------ */
+  /* ------------- GUARDS  (after hooks, safe for rules-of-hooks) ------ */
+  if (isLoading) return center("Loading…");
+  if (error || !data) return center("Failed to load puzzle 😢", true);
+
+  const gridRows: string[][] = data.grid.map((row: any) =>
+    Array.isArray(row) ? row : typeof row === "string" ? row.split("") : row
+  );
+  const solutions: string[] = Array.isArray(data.solution) ? data.solution : [];
+
+  const payloadOk =
+    solutions.length === 4 &&
+    gridRows.length === 4 &&
+    gridRows.every((r) => Array.isArray(r) && r.length === 5);
+
+  if (!payloadOk) {
+    console.error("Puzzle payload malformed:", data);
+    return center("Puzzle unavailable (bad data) 😢", true);
+  }
+
+  /* --------------------------- UI ----------------------------------- */
   return (
     <main className="h-full flex items-center justify-center">
       <section className="container max-w-md mx-auto relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 xs:p-8 sm:p-10 space-y-8">
@@ -123,7 +128,7 @@ function App() {
   );
 }
 
-/* ----------------------- bootstrap ----------------------------- */
+/* ---------------- bootstrap (single export) ------------------------- */
 export default function Root() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -131,6 +136,7 @@ export default function Root() {
     </QueryClientProvider>
   );
 }
+
 
 
 
