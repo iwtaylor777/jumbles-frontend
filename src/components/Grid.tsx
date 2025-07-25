@@ -1,18 +1,28 @@
-// src/components/Grid.tsx
-import { useState, useMemo, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { motion } from "framer-motion";
-import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 
 import WORDS from "../data/words5";
 
 const WORD_SET = new Set(WORDS);
 const MAX_SWAPS = 14;
+const prevRows = useRef<boolean[]>([false, false, false, false]);
 
-/* ---------- helper components -------------------------------- */
-
+/* -------------------------------------------------- helpers */
 function DraggableTile({ id, children }: { id: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const { setNodeRef, listeners, attributes, transform, isDragging } =
+    useDraggable({ id });
   const style = transform
     ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
     : undefined;
@@ -20,9 +30,9 @@ function DraggableTile({ id, children }: { id: string; children: React.ReactNode
   return (
     <div
       ref={setNodeRef}
-      style={style}
       {...listeners}
       {...attributes}
+      style={style}
       className={isDragging ? "z-50 cursor-grabbing" : "cursor-grab"}
     >
       {children}
@@ -35,29 +45,52 @@ function DroppableSpot({ id, children }: { id: string; children: React.ReactNode
   return <div ref={setNodeRef}>{children}</div>;
 }
 
-/* ---------- main Grid component ------------------------------ */
+/* -------------------------------------------------- component */
 type Props = {
-  initial: string[][];               // 4×5 letter grid
-  onSolved: (moves: number) => void; // callback when solved
+  initial: string[][];
+  onSolved: (moves: number) => void;
+  onRowSolved: () => void;
+  onOutOfMoves: () => void;
 };
 
-export default function Grid({ initial, onSolved }: Props) {
+export type GridHandle = { reset: () => void };
+
+const Grid = forwardRef<GridHandle, Props>(function Grid(
+  { initial, onSolved, onOutOfMoves },
+  ref,
+) {
   const [grid, setGrid] = useState(initial);
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [swaps, setSwaps] = useState(0);
 
-  /* ----- valid rows (memoised) ------------------------------- */
+  /* ------------------- row validity ------------------------ */
   const validRows = useMemo(
     () => grid.map((row) => WORD_SET.has(row.join("").toLowerCase())),
-    [grid]
+    [grid],
   );
 
-  /* ----- victory check --------------------------------------- */
   useEffect(() => {
-    if (validRows.every(Boolean)) onSolved(swaps);
-  }, [validRows, swaps, onSolved]);
+    // detect newly-solved rows
+    if (validRows.some(Boolean)) {
+    // compare with previous render
+    const newlySolved = validRows.filter((v, i) => v && !prevRows.current[i]);
+    if (newlySolved.length) onRowSolved();
+  }
 
-  /* ----- swap logic ------------------------------------------ */
+    if (validRows.every(Boolean)) onSolved(swaps);
+    if (swaps >= MAX_SWAPS && !validRows.every(Boolean)) onOutOfMoves();
+  }, [validRows, swaps, onSolved, onOutOfMoves]);
+
+  /* ------------------- expose reset() ---------------------- */
+  useImperativeHandle(ref, () => ({
+    reset() {
+      setGrid(initial);
+      setSwaps(0);
+      setSelected(null);
+    },
+  }));
+
+  /* ------------------- swap logic -------------------------- */
   function performSwap(r1: number, c1: number, r2: number, c2: number) {
     if (swaps >= MAX_SWAPS) return;
     const next = grid.map((row) => [...row]);
@@ -67,7 +100,7 @@ export default function Grid({ initial, onSolved }: Props) {
     setSwaps((s) => s + 1);
   }
 
-  /* ----- click handler --------------------------------------- */
+  /* click-to-swap (keyboard-friendly) */
   function pick(r: number, c: number) {
     if (!selected) {
       setSelected([r, c]);
@@ -81,33 +114,32 @@ export default function Grid({ initial, onSolved }: Props) {
     performSwap(sr, sc, r, c);
   }
 
-  /* ----- DnD handler ----------------------------------------- */
-  function handleDragEnd(event: DragEndEvent) {
-    const fromId = event.active.id.toString();        // "r-c"
-    const toId = event.over?.id.toString();
-    if (!toId || fromId === toId) return;
-
-    const [r1, c1] = fromId.split("-").map(Number);
-    const [r2, c2] = toId.split("-").map(Number);
+  /* drag-to-swap */
+  function handleDragEnd(e: DragEndEvent) {
+    const from = e.active.id.toString();
+    const to = e.over?.id?.toString();
+    if (!to || from === to) return;
+    const [r1, c1] = from.split("-").map(Number);
+    const [r2, c2] = to.split("-").map(Number);
     performSwap(r1, c1, r2, c2);
   }
 
-  /* ------------- render -------------------------------------- */
+  /* ------------------- render ------------------------------ */
   return (
     <DndContext onDragEnd={handleDragEnd}>
       <div className="flex flex-col items-center gap-4">
+        {/* grid */}
         <div>
           {grid.map((row, r) => (
             <motion.div
               key={r}
               className="flex"
-              initial={false}
               animate={validRows[r] ? { y: [-6, 0] } : { y: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 18 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
               {row.map((ch, c) => {
-                const isSel = selected?.[0] === r && selected?.[1] === c;
                 const solved = validRows[r];
+                const isSel = selected?.[0] === r && selected?.[1] === c;
                 const disabled = swaps >= MAX_SWAPS && !solved;
                 const id = `${r}-${c}`;
 
@@ -115,7 +147,7 @@ export default function Grid({ initial, onSolved }: Props) {
                   <DroppableSpot id={id} key={id}>
                     <DraggableTile id={id}>
                       <button
-                        aria-label={`Swap letter ${ch}`}
+                        aria-label={`Letter ${ch} row ${r + 1} col ${c + 1}`}
                         onClick={() => pick(r, c)}
                         disabled={disabled}
                         className={`w-14 h-14 xs:w-14 xs:h-14 sm:w-16 sm:h-16
@@ -145,12 +177,13 @@ export default function Grid({ initial, onSolved }: Props) {
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-200 text-center">
-          Swaps&nbsp;
-          <span className="font-semibold">{swaps}</span>/{MAX_SWAPS}
+          Swaps <span className="font-semibold">{swaps}</span>/{MAX_SWAPS}
         </p>
       </div>
     </DndContext>
   );
-}
+});
+
+export default Grid;
 
 
