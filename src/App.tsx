@@ -41,9 +41,9 @@ export default function App() {
   );
   const [solvedMoves, setSolvedMoves] = useState<number | null>(null);
 
-  const [showHelp, setShowHelp] = useState(false);
-  const [showGiveUp, setShowGiveUp] = useState(false);
-  const [showAnswers, setShowAnswers] = useState(false);
+  // const [showHelp, setShowHelp] = useState(false);
+  // const [showGiveUp, setShowGiveUp] = useState(false);
+  // const [showAnswers, setShowAnswers] = useState(false);
   const { width, height } = useWindowSize();
 
   /* ─── DATA FETCH ───────────────────────────────────────── */
