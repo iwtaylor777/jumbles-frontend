@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------
-   Grid component   –   handles all tile logic + DnD + tap swap
+   Grid component — drag-and-drop + tap-to-swap
 ------------------------------------------------------------- */
 import {
   useState,
@@ -8,16 +8,34 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { motion } from "framer-motion";
 import WORDS from "../data/words5";
 
 const WORD_SET = new Set(WORDS);
 export const MAX_SWAPS = 14;
 
-/* ── small helpers ─────────────────────────────────────────── */
-function Draggable({
+/* ---------- public API ---------- */
+export type GridHandle = { reset(): void; swaps: number };
+
+type Props = {
+  initial: string[][];
+  onRowSolved(row: number): void;
+  onSolved(moves: number): void;
+  onOutOfMoves(): void;
+  onSwap?(count: number): void;
+};
+
+/* ---------- tiny helpers ---------- */
+function DraggableBox({
   id,
   children,
 }: {
@@ -34,7 +52,7 @@ function Draggable({
     </div>
   );
 }
-function Droppable({
+function DroppableBox({
   id,
   children,
 }: {
@@ -45,17 +63,7 @@ function Droppable({
   return <div ref={setNodeRef}>{children}</div>;
 }
 
-/* ── public API ────────────────────────────────────────────── */
-export type GridHandle = { reset(): void; swaps: number };
-
-type Props = {
-  initial: string[][];
-  onRowSolved(row: number): void;
-  onSolved(moves: number): void;
-  onOutOfMoves(): void;
-  onSwap?(count: number): void; // ← parent callback
-};
-
+/* ---------- Grid component ---------- */
 const Grid = forwardRef<GridHandle, Props>(function Grid(
   { initial, onRowSolved, onSolved, onOutOfMoves, onSwap },
   ref
@@ -64,13 +72,13 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
   const [swaps, setSwaps] = useState(0);
   const [selected, setSelected] = useState<[number, number] | null>(null);
 
-  /* ── validity for each row ──────────────────────────────── */
+  /* validity per row */
   const validRows = useMemo(
     () => grid.map((row) => WORD_SET.has(row.join("").toLowerCase())),
     [grid]
   );
 
-  /* detect rows that became valid in this render */
+  /* notify when a row flips to solved */
   const prevValid = useState(validRows)[0];
   useEffect(() => {
     validRows.forEach((ok, i) => {
@@ -79,13 +87,14 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validRows]);
 
-  /* puzzle solved / out of moves */
+  /* puzzle status */
   useEffect(() => {
     if (validRows.every(Boolean)) onSolved(swaps);
-    if (swaps >= MAX_SWAPS && !validRows.every(Boolean)) onOutOfMoves();
+    if (swaps >= MAX_SWAPS && !validRows.every(Boolean))
+      onOutOfMoves();
   }, [validRows, swaps, onSolved, onOutOfMoves]);
 
-  /* expose ref API */
+  /* expose ref */
   useImperativeHandle(ref, () => ({
     reset() {
       setGrid(initial);
@@ -96,7 +105,7 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
     swaps,
   }));
 
-  /* ── helpers ─────────────────────────────────────────────── */
+  /* swap helper */
   function doSwap(r1: number, c1: number, r2: number, c2: number) {
     const next = grid.map((r) => [...r]);
     [next[r1][c1], next[r2][c2]] = [next[r2][c2], next[r1][c1]];
@@ -106,7 +115,16 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
     onSwap?.(newCount);
   }
 
-  /* drag-and-drop */
+  /* drag sensors: start drag only after 8 px movement */
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
+  function handleDragStart(_: DragStartEvent) {
+    setSelected(null); // cancel tap selection if a real drag begins
+  }
   function handleDragEnd(e: DragEndEvent) {
     const from = e.active.id.toString();
     const to = e.over?.id?.toString();
@@ -116,24 +134,28 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
     doSwap(r1, c1, r2, c2);
   }
 
-  /* tap-to-swap */
-  function handleTileClick(r: number, c: number) {
+  /* tap / click handler */
+  function handlePointerDown(r: number, c: number) {
     if (selected) {
       const [sr, sc] = selected;
       if (sr === r && sc === c) {
         setSelected(null);
-        return;
+      } else {
+        doSwap(sr, sc, r, c);
+        setSelected(null);
       }
-      doSwap(sr, sc, r, c);
-      setSelected(null);
     } else {
       setSelected([r, c]);
     }
   }
 
-  /* ── render ──────────────────────────────────────────────── */
+  /* render */
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <div className="flex flex-col items-center gap-4">
         <div>
           {grid.map((row, r) => (
@@ -146,14 +168,14 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
               {row.map((ch, c) => {
                 const id = `${r}-${c}`;
                 const solved = validRows[r];
-                const isSel =
-                  selected && selected[0] === r && selected[1] === c;
+                const isSel = selected?.[0] === r && selected?.[1] === c;
                 return (
-                  <Droppable id={id} key={id}>
-                    <Draggable id={id}>
+                  <DroppableBox id={id} key={id}>
+                    <DraggableBox id={id}>
                       <div
-                        onClick={() => handleTileClick(r, c)}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 m-px rounded-md font-bold text-2xl flex items-center justify-center
+                        onPointerDown={() => handlePointerDown(r, c)}
+                        className={`w-14 h-14 sm:w-16 sm:h-16 m-px rounded-md
+                          font-bold text-2xl flex items-center justify-center
                           ${
                             solved
                               ? "bg-emerald-400 text-white"
@@ -163,8 +185,8 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
                       >
                         {ch}
                       </div>
-                    </Draggable>
-                  </Droppable>
+                    </DraggableBox>
+                  </DroppableBox>
                 );
               })}
             </motion.div>
@@ -176,6 +198,11 @@ const Grid = forwardRef<GridHandle, Props>(function Grid(
 });
 
 export default Grid;
+
+
+
+
+
 
 
 

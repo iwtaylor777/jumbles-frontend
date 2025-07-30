@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
-   App shell – handles theme, modals, hard mode, share, swap counter
+   src/App.tsx  —  Jumbles frontend (with live swap count, modals, etc.)
 ------------------------------------------------------------------- */
 import {
   useState,
@@ -21,7 +21,6 @@ import { Dialog } from "@headlessui/react";
 import Grid, { type GridHandle } from "./components/Grid";
 import { fetchToday } from "./api";
 
-/* ── helpers ───────────────────────────────────────────────── */
 const queryClient = new QueryClient();
 function center(msg: string, err = false) {
   return (
@@ -31,7 +30,6 @@ function center(msg: string, err = false) {
   );
 }
 
-/* ── main component ────────────────────────────────────────── */
 function App() {
   /* theme */
   const [dark, setDark] = useState(
@@ -48,15 +46,16 @@ function App() {
     }
   }, [dark]);
 
-  /* game-level state */
-  const [hardMode, setHardMode]   = useState(false);
+  /* mode + swap count */
+  const [hardMode, setHardMode] = useState(false);
   const [swapCount, setSwapCount] = useState(0);
 
   type GridHandleEx = GridHandle & { swaps?: number };
   const gridRef = useRef<GridHandleEx>(null) as MutableRefObject<GridHandleEx>;
 
+  /* puzzle state */
   const [solvedMoves, setSolvedMoves] = useState<number | null>(null);
-  const [showGiveUp, setShowGiveUp] = useState(false); // out-of-moves modal
+  const [showGiveUp, setShowGiveUp] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [rowSolved, setRowSolved] = useState<boolean[]>([
@@ -67,13 +66,13 @@ function App() {
   ]);
   const { width, height } = useWindowSize();
 
-  /* data fetch */
+  /* fetch puzzle */
   const { data, isLoading, error } = useQuery({
     queryKey: ["today"],
     queryFn: fetchToday,
   });
 
-  /* callbacks from Grid */
+  /* callbacks from grid */
   const handleRowSolved = useCallback((r: number) => {
     setRowSolved((prev) => {
       const next = [...prev];
@@ -81,22 +80,23 @@ function App() {
       return next;
     });
   }, []);
-
   const handlePuzzleSolved = useCallback(
     (moves: number) => setSolvedMoves(moves),
     []
   );
-
   const handleOutOfMoves = useCallback(() => setShowGiveUp(true), []);
 
-  /* wait states */
+  /* early returns */
   if (isLoading) return center("Loading…");
   if (error || !data) return center("Failed to load puzzle 😢", true);
 
-  /* normalise API payload */
-  const toArr = (r: string | string[]) => (Array.isArray(r) ? r : r.split(""));
+  /* prepare grid & solutions */
+  const toArr = (r: string | string[]) =>
+    Array.isArray(r) ? r : r.split("");
   let grid = data.grid.map(toArr);
-  const solutions: string[] = Array.isArray(data.solution) ? data.solution : [];
+  const solutions: string[] = Array.isArray(data.solution)
+    ? data.solution
+    : [];
   if (solutions.length !== 4 || grid.length !== 4) {
     console.error("Bad payload", data);
     return center("Puzzle unavailable 😢", true);
@@ -118,12 +118,12 @@ function App() {
   /* share helper */
   function buildEmojiGrid(ok: boolean, moves: number | null) {
     const green = "🟢";
-    const red   = "🔴";
-    const rows  = rowSolved.map((v) => (v ? green.repeat(5) : red.repeat(5)));
-    const mode  = hardMode ? " (hard)" : "";
+    const red = "🔴";
+    const rows = rowSolved.map((v) => (v ? green.repeat(5) : red.repeat(5)));
+    const tag = hardMode ? " (hard)" : "";
     const title = ok
-      ? `Jumbles ${puzzleId}${mode} — ${moves}/14 swaps`
-      : `I got jumbled today${mode} :(`;
+      ? `Jumbles ${puzzleId}${tag} — ${moves}/14 swaps`
+      : `I got jumbled today${tag} :(`;
     return `${title}\n${rows.join("\n")}`;
   }
   async function copyShare(ok: boolean) {
@@ -131,11 +131,10 @@ function App() {
     alert("Copied to clipboard!");
   }
 
-  /* ── JSX ──────────────────────────────────────────────── */
   return (
     <main className="h-full flex items-center justify-center">
       <section className="container max-w-md mx-auto relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 xs:p-8 sm:p-10 space-y-8">
-        {/* theme */}
+        {/* dark mode toggle */}
         <button
           aria-label="Toggle dark mode"
           onClick={() => setDark((d) => !d)}
@@ -144,7 +143,7 @@ function App() {
           {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* info */}
+        {/* info button */}
         <button
           aria-label="Game rules"
           onClick={() => setShowInfo(true)}
@@ -153,7 +152,7 @@ function App() {
           <Info size={18} />
         </button>
 
-        {/* hard mode */}
+        {/* hard mode toggle */}
         <button
           aria-label="Toggle hard mode"
           onClick={() => {
@@ -179,7 +178,7 @@ function App() {
           </p>
         )}
 
-        {/* Grid */}
+        {/* the grid */}
         <Grid
           key={gridKey}
           ref={gridRef}
@@ -348,20 +347,11 @@ function App() {
               </Dialog.Title>
               <ul className="space-y-2 text-sm dark:text-gray-300 list-disc ml-5 [&[data-headlessui-state=hidden]]:list-none">
                 <li>You start with four scrambled five-letter words.</li>
-                <li>
-                  Swap letters by <strong>drag-and-drop</strong> or by{" "}
-                  <strong>tapping two tiles</strong>.
-                </li>
-                <li>
-                  You have <strong>14 swaps</strong> to solve them all.
-                </li>
+                <li>Swap letters by drag-and-drop or by tapping two tiles.</li>
+                <li>You have 14 swaps to solve them all.</li>
                 <li>Green rows are correct, grey rows still need fixing.</li>
-                <li>
-                  Hit <em>Give up</em> (or run out of swaps) to see the answers.
-                </li>
-                <li>
-                  <strong>Hard mode</strong> shuffles letters across every row.
-                </li>
+                <li>Hit Give up (or run out of swaps) to see the answers.</li>
+                <li>Hard mode shuffles letters across every row.</li>
               </ul>
               <div className="flex justify-end">
                 <button
@@ -379,7 +369,6 @@ function App() {
   );
 }
 
-/* ── wrapper ─────────────────────────────────────────────── */
 export default function WrappedApp() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -387,6 +376,7 @@ export default function WrappedApp() {
     </QueryClientProvider>
   );
 }
+
 
 
 
